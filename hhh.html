@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>互联网人格审判所 | by shyvana</title>
+  <style>
+    :root {
+      --bg1:#140a28; --bg2:#1f1141; --bg3:#0d0a1b;
+      --text:#fbf9ff; --muted:#c7c0df;
+      --pink:#ff3ea6; --purple:#8b5cff; --cyan:#39dcff; --yellow:#ffd54d; --green:#49f59d;
+      --glass:rgba(255,255,255,.08); --glass2:rgba(255,255,255,.05);
+      --border:rgba(255,255,255,.12); --shadow:0 26px 90px rgba(0,0,0,.4);
+      --radius:26px;
+    }
+    *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+    html,body{margin:0;padding:0}
+    body{
+      min-height:100vh;color:var(--text);font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      background:
+        radial-gradient(circle at 12% 12%, rgba(255,62,166,.24), transparent 26%),
+        radial-gradient(circle at 88% 18%, rgba(57,220,255,.18), transparent 25%),
+        radial-gradient(circle at 50% 90%, rgba(139,92,255,.18), transparent 26%),
+        linear-gradient(180deg,var(--bg1),var(--bg2) 55%,var(--bg3));
+      overflow-x:hidden;
+    }
+    .fx,.fx2,.scan{position:fixed;inset:0;pointer-events:none}
+    .fx{opacity:.08;background-image:linear-gradient(rgba(255,255,255,.45) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.35) 1px,transparent 1px);background-size:3px 3px}
+    .fx2:before,.fx2:after{content:"";position:absolute;inset:0;background-image:radial-gradient(circle,rgba(255,255,255,.8) 1px,transparent 1.3px);background-size:130px 130px;opacity:.18;animation:float 24s linear infinite}
+    .fx2:after{opacity:.08;animation-duration:34s;background-size:180px 180px}
+    .scan{opacity:.06;background:linear-gradient(to bottom,transparent,rgba(255,255,255,.6),transparent);background-size:100% 8px;animation:scan 10s linear infinite}
+    @keyframes float{from{transform:translateY(0)}to{transform:translateY(120px)}}
+    @keyframes scan{from{transform:translateY(-100%)}to{transform:translateY(100%)}}
+    @keyframes pop{from{opacity:0;transform:translateY(14px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+    @keyframes glow{0%,100%{box-shadow:0 0 0 rgba(255,62,166,0)}50%{box-shadow:0 0 28px rgba(255,62,166,.28)}}
+    @keyframes glitch{0%,100%{transform:translate(0);text-shadow:none}20%{transform:translate(-1px,1px);text-shadow:2px 0 rgba(255,62,166,.35),-2px 0 rgba(57,220,255,.35)}40%{transform:translate(1px,-1px)}60%{transform:translate(-1px,0)}80%{transform:translate(1px,1px)}}
+
+    .wrap{position:relative;z-index:1;width:min(980px,calc(100% - 22px));margin:0 auto;padding:18px 0 60px}
+    .card{background:var(--glass);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow)}
+    .hero{padding:24px;display:grid;grid-template-columns:1.2fr .8fr;gap:18px;align-items:stretch}
+    .badge{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:999px;background:rgba(255,255,255,.08);font-size:13px;color:#f7d8ff;border:1px solid rgba(255,255,255,.08)}
+    h1{margin:14px 0 12px;font-size:clamp(38px,7vw,72px);line-height:.96;letter-spacing:-.04em;animation:glitch 5s infinite steps(1)}
+    p{margin:0;color:var(--muted);line-height:1.9}
+    .hero p{max-width:60ch}
+    .cta{display:flex;flex-wrap:wrap;gap:12px;margin-top:20px}
+    button{border:0;cursor:pointer;transition:transform .16s ease,opacity .16s ease;font:inherit}
+    button:hover{transform:translateY(-2px)}
+    .btn-main{padding:14px 18px;border-radius:16px;background:linear-gradient(135deg,var(--pink),var(--purple));color:white;font-weight:800;animation:glow 2.2s ease-in-out infinite}
+    .btn-sub{padding:14px 18px;border-radius:16px;background:rgba(255,255,255,.09);color:white;font-weight:700;border:1px solid rgba(255,255,255,.08)}
+    .side{padding:18px;border-radius:22px;background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.04));border:1px solid rgba(255,255,255,.12);display:flex;flex-direction:column;justify-content:space-between;gap:14px}
+    .stats{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+    .stat{padding:14px;border-radius:16px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.08)}
+    .stat b{display:block;font-size:24px;margin-bottom:6px}.stat span{font-size:13px;color:var(--muted)}
+    .author{display:flex;justify-content:space-between;gap:10px;border-top:1px dashed rgba(255,255,255,.12);padding-top:12px;font-size:14px;color:#f6e4ff}
+
+    .section{margin-top:18px;padding:22px;animation:pop .25s ease}
+    .section h2{margin:0 0 8px;font-size:28px}
+    .tip{font-size:14px;color:var(--muted)}
+    .preview-grid,.result-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    .box{padding:18px;border-radius:22px;background:var(--glass2);border:1px solid rgba(255,255,255,.09)}
+    .type{display:inline-flex;align-items:center;gap:12px;padding:14px 16px;border-radius:18px;background:linear-gradient(135deg,rgba(255,62,166,.24),rgba(57,220,255,.16));border:1px solid rgba(255,255,255,.12);font-size:30px;font-weight:900;letter-spacing:.08em}
+    .pills{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+    .pill{padding:8px 11px;border-radius:999px;background:rgba(255,255,255,.09);font-size:13px;color:#fff2ff;border:1px solid rgba(255,255,255,.08)}
+    .roast{margin-top:14px;padding:14px;border-radius:16px;background:rgba(255,255,255,.06);border:1px dashed rgba(255,255,255,.14);color:#ffe1f3;line-height:1.8}
+    .barlist{display:grid;gap:13px}.baritem label{display:flex;justify-content:space-between;margin-bottom:7px;font-size:13px;color:var(--muted)}
+    .bar{height:12px;border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden;border:1px solid rgba(255,255,255,.06)}
+    .bar>div{height:100%;background:linear-gradient(90deg,var(--yellow),var(--pink),var(--purple),var(--cyan));border-radius:inherit}
+
+    .quiz,.result{display:none}
+    .progress{height:14px;border-radius:999px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.06);overflow:hidden;margin-bottom:18px}
+    .progress>div{height:100%;width:0;background:linear-gradient(90deg,var(--yellow),var(--pink),var(--purple),var(--cyan));transition:width .25s ease}
+    .meta{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:10px}
+    .qtag{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;background:rgba(255,62,166,.12);border:1px solid rgba(255,62,166,.24);font-size:13px;color:#ffd8ef}
+    .counter{font-size:13px;color:var(--muted)}
+    .qtitle{font-size:clamp(26px,4.5vw,42px);line-height:1.22;letter-spacing:-.02em;margin:0 0 8px}
+    .qsub{font-size:13px;color:#f7dbff;margin-bottom:18px}
+    .opts{display:grid;gap:12px}
+    .opt{padding:18px;border-radius:20px;background:linear-gradient(180deg,rgba(255,255,255,.1),rgba(255,255,255,.06));border:1px solid rgba(255,255,255,.1);cursor:pointer;line-height:1.7;position:relative;overflow:hidden}
+    .opt:hover{background:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,.1));border-color:rgba(255,255,255,.18)}
+    .opt:after{content:"";position:absolute;right:-20px;bottom:-60px;width:140px;height:140px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.16),transparent 60%)}
+
+    .share-card{position:relative;padding:20px;border-radius:24px;background:
+      radial-gradient(circle at top right, rgba(255,62,166,.20), transparent 28%),
+      radial-gradient(circle at bottom left, rgba(57,220,255,.15), transparent 28%),
+      linear-gradient(180deg, rgba(23,14,49,.98), rgba(15,11,30,.98));
+      border:1px solid rgba(255,255,255,.12);overflow:hidden}
+    .share-card:before{content:"互联网人格审判所";position:absolute;top:14px;right:16px;font-size:12px;letter-spacing:.12em;color:rgba(255,255,255,.32)}
+    .share-name{margin:10px 0 8px;font-size:34px;line-height:1.06;letter-spacing:-.03em}
+    .share-desc{font-size:15px;line-height:1.9;color:#f3eeff}
+    .share-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
+    .textarea{width:100%;min-height:140px;border-radius:18px;padding:14px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:#fff;font:inherit;line-height:1.7;resize:vertical;margin-top:14px}
+    .small{font-size:12px;color:var(--muted);line-height:1.8;margin-top:16px}
+
+    .overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(8,6,20,.72);backdrop-filter:blur(10px);opacity:0;visibility:hidden;transition:opacity .18s ease,visibility .18s ease;z-index:20}
+    .overlay.show{opacity:1;visibility:visible}
+    .overlay .panel{width:min(520px,100%);padding:24px;border-radius:24px;background:linear-gradient(180deg,rgba(27,19,54,.98),rgba(15,11,32,.98));border:1px solid rgba(255,255,255,.12);text-align:center;box-shadow:var(--shadow)}
+    .overlay b{display:block;font-size:20px;margin-bottom:10px;color:#ffe4f4}
+
+    .corner{position:fixed;right:14px;bottom:14px;z-index:2;padding:10px 14px;border-radius:999px;background:rgba(255,255,255,.12);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.12);font-size:13px;color:#fff0ff}
+
+    @media (max-width:860px){.hero,.preview-grid,.result-grid{grid-template-columns:1fr}.wrap{width:min(100% - 14px,980px)}.hero,.section{padding:18px}.corner{display:none}}
+  </style>
+</head>
+<body>
+  <div class="fx"></div><div class="fx2"></div><div class="scan"></div>
+  <div class="wrap">
+    <section class="card hero" id="home">
+      <div>
+        <div class="badge">🧪 爆款抽象测试 · 适合群聊互相伤害</div>
+        <h1>测一测你到底是<br>哪种互联网活体 bug</h1>
+        <p>这个测试不会治愈你，只会用 12 道题把你的精神状态压缩成 4 个字母，再送你一段足够适合截图发群的结果。适用于：朋友互测、情侣互相破防、同事午休摸鱼、深夜突然怀疑人生。</p>
+        <div class="cta">
+          <button class="btn-main" id="startBtn">开始挨骂</button>
+          <button class="btn-sub" id="lookBtn">先看别人的下场</button>
+        </div>
+      </div>
+      <div class="side">
+        <div>
+          <div class="tip" style="margin-bottom:10px">本次审判将输出</div>
+          <div class="stats">
+            <div class="stat"><b>12</b><span>道贴脸问题</span></div>
+            <div class="stat"><b>16</b><span>种离谱人格</span></div>
+            <div class="stat"><b>1</b><span>张适合截图的结果卡</span></div>
+            <div class="stat"><b>∞</b><span>群聊后遗症</span></div>
+          </div>
+        </div>
+        <div class="author"><span>作者：<strong>shyvana</strong></span><span>建议拉朋友一起丢脸</span></div>
+      </div>
+    </section>
+
+    <section class="card section" id="preview">
+      <h2>结果长这样</h2>
+      <p class="tip">这只是示例，不代表你真的只是一个普通人。大概率你会更奇怪一点。</p>
+      <div class="preview-grid">
+        <div class="box share-card">
+          <div class="type">EOVA</div>
+          <div class="share-name">人间扩音器</div>
+          <div class="share-desc">你是一种能把“吃了吗”聊成 TED 演讲的社交生物。别人沉默的时候你会自动补位，别人只想吃饭的时候你已经在帮这个局做内容策划。你活着像开了外放，别人活着像插着耳机。</div>
+          <div class="pills">
+            <span class="pill">话题永动机</span><span class="pill">群聊复活甲</span><span class="pill">兴奋先于理智</span><span class="pill">适合制造热闹</span>
+          </div>
+          <div class="roast">系统锐评：你不是社牛，你是把安静当成网络故障。</div>
+        </div>
+        <div class="box">
+          <div class="barlist">
+            <div class="baritem"><label><span>E 外放值</span><span>88%</span></label><div class="bar"><div style="width:88%"></div></div></div>
+            <div class="baritem"><label><span>O 抽象值</span><span>73%</span></label><div class="bar"><div style="width:73%"></div></div></div>
+            <div class="baritem"><label><span>V 情绪值</span><span>62%</span></label><div class="bar"><div style="width:62%"></div></div></div>
+            <div class="baritem"><label><span>A 冲动值</span><span>81%</span></label><div class="bar"><div style="width:81%"></div></div></div>
+          </div>
+          <div class="roast" style="margin-top:16px">传播建议：测完请立刻丢进群里，看谁嘴硬说“不准”，谁就是最准的那一个。</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card section quiz" id="quiz">
+      <div class="progress"><div id="bar"></div></div>
+      <div class="meta"><div class="qtag" id="qTag">第 1 题 · 正在读取你的奇怪频率</div><div class="counter" id="counter">1 / 12</div></div>
+      <div class="qtitle" id="qTitle"></div>
+      <div class="qsub" id="qSub"></div>
+      <div class="opts" id="opts"></div>
+      <div class="small">友情提醒：这个测试不科学，但很会说实话。</div>
+    </section>
+
+    <section class="card section result" id="result">
+      <div class="result-grid">
+        <div class="share-card">
+          <div class="type" id="rCode">ILMP</div>
+          <div class="share-name" id="rName">低耗摸鱼神体</div>
+          <div class="share-desc" id="rDesc"></div>
+          <div class="pills" id="rTraits"></div>
+          <div class="roast" id="rRoast"></div>
+          <div class="share-actions">
+            <button class="btn-main" id="copyBtn">复制结果去群里作案</button>
+            <button class="btn-sub" id="linkBtn">复制测试链接</button>
+            <button class="btn-sub" id="restartBtn">我不服，重判</button>
+          </div>
+          <textarea class="textarea" id="shareText" readonly></textarea>
+          <div class="small">作者：shyvana · 建议再拉 3 个朋友测，不然你会怀疑自己是不是唯一一个有病的。</div>
+        </div>
+        <div class="box">
+          <h2 style="margin-top:0">你的人格剖面</h2>
+          <div class="barlist" id="bars"></div>
+          <div class="roast" id="rSpread">转发提示：把结果发到群里，大家第一反应越大，说明越准。</div>
+          <div class="small">本测试为娱乐用途，不适用于医学诊断、招聘筛选、相亲盖章、分手判责、年终考核和任何需要成年人负责的场景。</div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="corner">作者：shyvana · 人格审判中</div>
+
+  <div class="overlay" id="overlay">
+    <div class="panel">
+      <b id="oTitle">系统正在整理你的黑历史…</b>
+      <p id="oText">算法发现你具备明显的人类矛盾特征，请稍候。</p>
+    </div>
+  </div>
+
+  <script>
+    const QUESTIONS = [
+      {
+        text: '群里突然有人发“在吗”，你最像哪一种反应？',
+        sub: '这道题主要检测你是正常人，还是脑内已经拍完 8 集连续剧。',
+        options: [
+          ['秒回，而且顺手把群聊盘活', { E: 2, A: 1 }],
+          ['先装死，等他以为我不在这个世界', { I: 2, P: 1 }],
+          ['先分析他是不是要找我帮忙', { L: 2, M: 1 }],
+          ['看心情，今天我精神状态不对外营业', { V: 2, I: 1 }],
+        ]
+      },
+      {
+        text: '凌晨 1:43 你突然想发朋友圈，通常会发什么？',
+        sub: '深夜发圈往往不是表达，是情绪越狱。',
+        options: [
+          ['一段像遗书又像竞选宣言的长文', { O: 2, V: 1 }],
+          ['一句“算了”配纯黑图，吓朋友', { M: 2, I: 1 }],
+          ['一张很有感觉但没人懂的图', { V: 2, O: 1 }],
+          ['写了半小时最后删掉，当无事发生', { I: 1, L: 1, P: 1 }],
+        ]
+      },
+      {
+        text: '你拖延时，最爱给自己找哪种理由？',
+        sub: '系统知道你不是懒，只是很会包装。',
+        options: [
+          ['不是拖延，是宇宙还没给我最终手感', { O: 2, P: 1 }],
+          ['我会拖，但最后一定极限交卷', { A: 2, E: 1 }],
+          ['我要先想清楚结构，不然开始不了', { L: 2, I: 1 }],
+          ['我想做，但我情绪今天不同意', { V: 2, M: 1 }],
+        ]
+      },
+      {
+        text: '冷场的群聊里，你通常扮演什么角色？',
+        sub: '本题精准识别你是不是群聊里的人工心肺。',
+        options: [
+          ['发梗图、抛话题、顺便救场', { E: 2, A: 1 }],
+          ['潜水，我是来围观不是来救火的', { I: 2, M: 1 }],
+          ['先判断有没有救的必要', { L: 2, P: 1 }],
+          ['想发，但怕更尴尬，于是继续憋着', { V: 2, I: 1 }],
+        ]
+      },
+      {
+        text: '别人夸你“你好有意思”，你内心真实想法是？',
+        sub: '请诚实，你的自我评价系统已经开始录音。',
+        options: [
+          ['谢谢，我确实是靠人格魅力续命', { E: 2, O: 1 }],
+          ['你现在看到的只是我发疯的冰山一角', { O: 2, I: 1 }],
+          ['有意思可以，但别临时拉我进局', { I: 2, M: 1 }],
+          ['我其实很有逻辑，只是你们不懂', { L: 2, P: 1 }],
+        ]
+      },
+      {
+        text: '你最怕和哪种人一起做事？',
+        sub: '这道题会暴露你心里真正的雷点。',
+        options: [
+          ['一直说“都行”，最后又什么都不行的人', { A: 2, L: 1 }],
+          ['完全不管别人感受，只会下命令的人', { V: 2, I: 1 }],
+          ['毫无创意，万物都想做成表格的人', { O: 2, E: 1 }],
+          ['一天八个想法，第二天全部推翻的人', { L: 2, M: 1 }],
+        ]
+      },
+      {
+        text: '如果你的人格是一种办公室工位，它会是？',
+        sub: '工位是人格外设，这不是一句玩笑。',
+        options: [
+          ['桌上很乱，但我知道每张纸的命运', { O: 2, A: 1 }],
+          ['表面干净，抽屉里有三个平行宇宙', { I: 2, O: 1 }],
+          ['井井有条，连焦虑都分了优先级', { L: 2, M: 1 }],
+          ['有人味，效率和情绪价值我都要', { V: 2, P: 1 }],
+        ]
+      },
+      {
+        text: '你收到重要消息后，通常怎么回？',
+        sub: '聊天记录不会说谎，尤其是那些你故意没回的。',
+        options: [
+          ['秒回猛回，像开了自动连发', { E: 2, A: 1 }],
+          ['心里已经回完了，现实还没发出去', { I: 2, V: 1 }],
+          ['先把语气、逻辑、边界感都调好', { L: 2, M: 1 }],
+          ['回不回取决于我当时电量够不够', { P: 1, M: 2 }],
+        ]
+      },
+      {
+        text: '你的人生计划更像什么？',
+        sub: '请不要用“顺其自然”掩盖你的混乱。',
+        options: [
+          ['先上线再说，bug 在热爱里修', { A: 2, E: 1 }],
+          ['更新日志写很细，但项目本人未必启动', { L: 2, M: 1 }],
+          ['每隔一阵子就想重启人生版本', { O: 2, P: 1 }],
+          ['想做很多，但先等我情绪通过审批', { V: 2, I: 1 }],
+        ]
+      },
+      {
+        text: '朋友突然说“今晚出来”，你第一反应是？',
+        sub: '这题检测的是你的社交续航，不是你的礼貌。',
+        options: [
+          ['走啊，我最擅长把局越聊越大', { E: 2, O: 1 }],
+          ['看人数，超过 4 个我灵魂会下线', { I: 2, P: 1 }],
+          ['先问地点、时间、都有谁、几点结束', { L: 2, A: 1 }],
+          ['我想去，但今天的人设还没加载好', { V: 2, I: 1 }],
+        ]
+      },
+      {
+        text: '下面哪句话最像你的灵魂签名？',
+        sub: '最后两题，请用最自然的方式暴露自己。',
+        options: [
+          ['我不是高调，我只是存在感很有主见', { E: 2, O: 1 }],
+          ['我不是冷淡，我只是在后台缓冲', { I: 2, M: 1 }],
+          ['我不是犹豫，我是在建立长期正确性', { L: 2, P: 1 }],
+          ['我不是难搞，我只是想按舒服频率活着', { V: 2, O: 1 }],
+        ]
+      },
+      {
+        text: '如果让朋友用一句话骂醒你，最可能是哪句？',
+        sub: '最终题：人格总会在一句狠话里露馅。',
+        options: [
+          ['你少说两句也不会死', { E: 2, M: 1 }],
+          ['你别老在脑子里过日子', { I: 2, O: 1 }],
+          ['你别什么都想明白了才开始', { L: 2, M: 1 }],
+          ['你别总被心情牵着跑', { V: 2, P: 1 }],
+        ]
+      }
+    ];
+
+    const RESULTS = {
+      EOVA: { name:'人间扩音器', desc:'你是一种能把“吃了吗”聊成 TED 演讲的社交生物。别人沉默的时候你会自动补位，别人只想吃饭的时候你已经在替这个局做内容策划。你活着像开了外放，别人活着像插着耳机。', traits:['话题永动机','群聊复活甲','兴奋先于理智','适合制造热闹'], roast:'系统锐评：你不是社牛，你是把安静当成网络故障。', spread:'建议发给那个每次聚会都最吵的人，看他敢不敢承认这就是他。' },
+      EOVP: { name:'浪漫发疯体', desc:'你活着靠的是感觉、新鲜感和一种说来就来的精神波动。你会因为一句很对味的话开心三天，也会因为一个瞬间突然想换种活法。你不是不稳定，你只是更新比别人频繁。', traits:['体验第一','情绪有戏','极易上头','适合制造故事'], roast:'系统锐评：你的人生不是计划表，是限时艺术展。', spread:'建议转发给那个总说“我最近又想通了”的朋友。' },
+      EOMA: { name:'高压开机怪', desc:'平时看着不一定最卷，但真到关键时刻你会像突然插上工业电。你擅长在混乱里顶住，在别人崩的时候变得异常清醒。只是收工之后，你的灵魂会要求赔偿。', traits:['紧急时能冲','日常像待机','容易过载','战时非常靠谱'], roast:'系统锐评：你平时像省电模式，出事时像机房着火。', spread:'建议发给那个永远说“我来兜底”的人，他大概率已经累坏了。' },
+      EOMP: { name:'抽象气氛组', desc:'你不是靠严谨取胜的人，但你靠反应和灵气就能把无聊场子救活。你有梗、会接、脑回路会拐弯，最适合把普通局聊成深夜名场面。规划对你来说更像参考文学。', traits:['反应很快','梗密度高','计划随缘','适合搞气氛'], roast:'系统锐评：你不是不守流程，你只是觉得流程应该配合你。', spread:'建议发给那个最会带偏话题的人，看他破防。' },
+      ELVA: { name:'热心推进器', desc:'你不是单纯会做事，你是那种一边推进进度、一边顺手把所有人情绪也扶起来的人。你有责任感、执行力，还有一点“不想让别人难做”的旧毛病。', traits:['能推进','会照顾人','行动力在线','容易替人操心'], roast:'系统锐评：你嘴上说没事，手上已经帮三个人收尾。', spread:'建议发给团队里最靠谱的那个人，他一定会嘴硬说“不准”。' },
+      ELVP: { name:'氛围策展人', desc:'你很懂“感觉对了”有多重要。你看重表达、审美和人与人之间那点微妙的气场。你不一定最吵，但你很会让一件事、一段关系、一场见面有记忆点。', traits:['氛围感重','表达细腻','审美在线','会制造记忆点'], roast:'系统锐评：别人活在日程里，你活在氛围里。', spread:'建议发给朋友圈里最会挑滤镜和文案的那个人。' },
+      ELMA: { name:'靠谱救火栓', desc:'你不是现场最热闹的那个，但一旦局面变烂，你往往是最先开始收拾残局的人。你讲效率、讲分寸，也讲别把事情做太难看。你很能扛，只是别人会默认你永远能扛。', traits:['收尾专家','抗压能打','兜底型选手','不爱邀功'], roast:'系统锐评：你的人生像一个不断被插队求助的工单系统。', spread:'建议转给那个总被别人“顺手拜托一下”的人。' },
+      ELMP: { name:'温柔缓冲层', desc:'你是很多关系里的降噪装置。你不热衷于赢过别人，也不喜欢让场面太难受。你更擅长让局面回到一个大家都能呼吸的状态。低调，但真的很好用。', traits:['安抚能力强','低攻击性','不爱争抢','柔和但不弱'], roast:'系统锐评：你不是没脾气，你只是先让世界别那么吵。', spread:'建议发给那个每次吵架都在中间打圆场的人。' },
+      IOVA: { name:'脑内创业鬼', desc:'你看起来安静，实际上脑子里长期并行十几个项目。你会因为一个点子突然燃起来，然后开始悄悄研究、默默推进，等别人意识到时你已经切到下一个宇宙。', traits:['脑内项目多','点子库存大','喜欢独立推进','需要自己的空间'], roast:'系统锐评：你的肉身坐在这里，脑子已经创业三轮。', spread:'建议发给那个永远在说“我最近有个想法”的朋友。' },
+      IOVP: { name:'情绪宇航员', desc:'你更习惯在自己的轨道里感受世界。你会被某句话、某首歌、某种氛围深深击中，也会在自己的小宇宙里待很久。你不是掉线，你只是去了别人进不去的频道。', traits:['高感受性','想象力旺盛','需要独处','沉浸感很强'], roast:'系统锐评：别人猜你，你已经在脑内拍完整部电影。', spread:'建议转给那个深夜常发“突然好想消失一下”的朋友。' },
+      IOMA: { name:'沉默核反应堆', desc:'你表面平静，内部能量却一直在悄悄积压。你平时不爱高频输出，但真到关键节点会突然全功率运行，让人怀疑你是不是偷偷升级过系统。', traits:['低调但能打','关键时刻爆发','不爱解释','内驱力很强'], roast:'系统锐评：你不是没反应，你是把大招都攒在后台。', spread:'建议发给那个平时不吭声、出手却最狠的人。' },
+      IOMP: { name:'隐形旁白机', desc:'你不是不参与，你只是更喜欢站在边上看清一切。你有很强的观察力，能捕捉别人忽略的细节，也很懂什么时候靠近、什么时候后撤。', traits:['观察入微','边界清晰','存在感低耗','不爱硬凑热闹'], roast:'系统锐评：你是现场最安静的人，也是知道最多的人。', spread:'建议发给那个每次不怎么说话但什么都看懂的人。' },
+      ILVA: { name:'温柔总控台', desc:'你是少见的“讲逻辑但不冷”的人。做事有结构，讲话有温度，关系里知道边界，也知道分寸。你像一个安静运行的中控系统，看着不炸裂，但非常耐用。', traits:['稳定可靠','理性温和','善于统筹','不轻易失控'], roast:'系统锐评：你像一个会安抚人的操作系统。', spread:'建议发给那个永远能把事情说清楚但又不讨人嫌的人。' },
+      ILVP: { name:'清醒浪漫鬼', desc:'你保留了感性和想象力，但不会完全把方向盘交给情绪。你会浪漫，也会在关键时刻踩刹车。看似柔软，其实很有自己的系统。', traits:['浪漫但清醒','有层次','边界感强','不容易被带跑'], roast:'系统锐评：你不是恋爱脑，你只是对美感有纪律。', spread:'建议发给那个看起来很好骗但其实最清醒的人。' },
+      ILMA: { name:'冷静主心骨', desc:'你最擅长的不是热闹，而是稳。别人慌的时候你会更清醒，别人乱的时候你会更想把事情摆回原位。你很适合当那个“最后还能讲话有条理”的人。', traits:['很稳','逻辑优先','抗压强','像人形定海神针'], roast:'系统锐评：别人情绪起飞时，你还在给现实系安全带。', spread:'建议发给那个总能在混乱里保持人样的人。' },
+      ILMP: { name:'低耗摸鱼神体', desc:'你不喜欢大开大合，也不爱把生活过成高强度直播。你更适合自己的节奏、自己的小空间，以及能掌控的舒服感。你不是不上进，你只是觉得人生没必要天天赶版本。', traits:['低耗社交','舒服优先','节奏自定义','很会保护能量'], roast:'系统锐评：你不是摆烂，你是在反抗没必要的系统更新。', spread:'建议发给那个总说“别催，我有我的节奏”的朋友。' }
+    };
+
+    const AXES = [
+      { a:'E', b:'I', label:'外放值' },
+      { a:'O', b:'L', label:'抽象值' },
+      { a:'V', b:'M', label:'情绪值' },
+      { a:'A', b:'P', label:'冲动值' },
+    ];
+
+    const overlayLines = [
+      ['系统正在整理你的黑历史…','算法发现你具备明显的人类矛盾特征，请稍候。'],
+      ['正在压缩你的精神状态…','系统尝试把你的一生问题塞进 4 个字母里。'],
+      ['正在判定你的群聊危险等级…','你的一条消息可能影响至少 3 个群的走向。'],
+      ['正在核查你的抽象波动…','检测到你同时具备正常和不太正常的行为特征。'],
+    ];
+
+    let idx = 0;
+    let scores = {};
+
+    const home = document.getElementById('home');
+    const preview = document.getElementById('preview');
+    const quiz = document.getElementById('quiz');
+    const result = document.getElementById('result');
+    const bar = document.getElementById('bar');
+    const qTag = document.getElementById('qTag');
+    const counter = document.getElementById('counter');
+    const qTitle = document.getElementById('qTitle');
+    const qSub = document.getElementById('qSub');
+    const opts = document.getElementById('opts');
+    const rCode = document.getElementById('rCode');
+    const rName = document.getElementById('rName');
+    const rDesc = document.getElementById('rDesc');
+    const rTraits = document.getElementById('rTraits');
+    const rRoast = document.getElementById('rRoast');
+    const rSpread = document.getElementById('rSpread');
+    const bars = document.getElementById('bars');
+    const shareText = document.getElementById('shareText');
+    const overlay = document.getElementById('overlay');
+    const oTitle = document.getElementById('oTitle');
+    const oText = document.getElementById('oText');
+
+    function resetScores(){ scores = {E:0,I:0,O:0,L:0,V:0,M:0,A:0,P:0}; }
+    function choose(a,b){ return scores[a] >= scores[b] ? a : b; }
+    function pct(a,b){ const total = scores[a] + scores[b] || 1; return Math.round(scores[a] / total * 100); }
+    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+    async function showOverlay(){
+      const line = overlayLines[Math.floor(Math.random()*overlayLines.length)];
+      oTitle.textContent = line[0];
+      oText.textContent = line[1];
+      overlay.classList.add('show');
+      await sleep(420);
+      overlay.classList.remove('show');
+      await sleep(70);
+    }
+
+    function startTest(){
+      resetScores(); idx = 0;
+      quiz.style.display = 'block';
+      result.style.display = 'none';
+      quiz.scrollIntoView({behavior:'smooth', block:'start'});
+      renderQuestion();
+    }
+
+    function renderQuestion(){
+      const q = QUESTIONS[idx];
+      bar.style.width = `${(idx / QUESTIONS.length) * 100}%`;
+      qTag.textContent = `第 ${idx + 1} 题 · 正在读取你的奇怪频率`;
+      counter.textContent = `${idx + 1} / ${QUESTIONS.length}`;
+      qTitle.textContent = q.text;
+      qSub.textContent = q.sub;
+      opts.innerHTML = '';
+      q.options.forEach(([text, add]) => {
+        const div = document.createElement('div');
+        div.className = 'opt';
+        div.textContent = text;
+        div.onclick = async () => {
+          Object.entries(add).forEach(([k,v]) => scores[k] += v);
+          await showOverlay();
+          idx += 1;
+          if(idx < QUESTIONS.length) renderQuestion();
+          else { bar.style.width = '100%'; renderResult(); }
+        };
+        opts.appendChild(div);
+      });
+    }
+
+    function renderResult(){
+      quiz.style.display = 'none';
+      result.style.display = 'block';
+      const code = [choose('E','I'), choose('O','L'), choose('V','M'), choose('A','P')].join('');
+      const data = RESULTS[code] || RESULTS.ILMP;
+      rCode.textContent = code;
+      rName.textContent = data.name;
+      rDesc.textContent = data.desc;
+      rRoast.textContent = `系统锐评：${data.roast.replace(/^系统锐评：?/,'')}`;
+      rSpread.textContent = `传播建议：${data.spread}`;
+      rTraits.innerHTML = data.traits.map(t => `<span class="pill">${t}</span>`).join('');
+      bars.innerHTML = AXES.map(x => {
+        const p = pct(x.a, x.b);
+        return `<div class="baritem"><label><span>${x.a} ${x.label}</span><span>${p}%</span></label><div class="bar"><div style="width:${p}%"></div></div></div>`;
+      }).join('');
+      const url = window.location.href;
+      shareText.value = `我在《互联网人格审判所》测出来是：${code} · ${data.name}\n\n${data.desc}\n\n${rRoast.textContent}\n\n我的特征：${data.traits.join(' / ')}\n\n快来测：${url}\n作者：shyvana`;
+      result.scrollIntoView({behavior:'smooth', block:'start'});
+    }
+
+    document.getElementById('startBtn').onclick = startTest;
+    document.getElementById('lookBtn').onclick = () => preview.scrollIntoView({behavior:'smooth', block:'start'});
+    document.getElementById('restartBtn').onclick = startTest;
+    document.getElementById('copyBtn').onclick = async () => {
+      try { await navigator.clipboard.writeText(shareText.value); const el = document.getElementById('copyBtn'); const old = el.textContent; el.textContent = '已复制，快去群里拱火'; setTimeout(()=>el.textContent = old, 1500);} catch(e) {}
+    };
+    document.getElementById('linkBtn').onclick = async () => {
+      try { await navigator.clipboard.writeText(window.location.href); const el = document.getElementById('linkBtn'); const old = el.textContent; el.textContent = '链接已复制'; setTimeout(()=>el.textContent = old, 1500);} catch(e) {}
+    };
+  </script>
+</body>
+</html>
