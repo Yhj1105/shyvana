@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SBTI 抽象人格检测站 | by shyvana</title>
+  <style>
+    :root {
+      --bg1: #140b2d;
+      --bg2: #221247;
+      --panel: rgba(20, 14, 40, 0.62);
+      --panel-2: rgba(255, 255, 255, 0.08);
+      --text: #f8f8ff;
+      --muted: #c3bcdf;
+      --pink: #ff4db8;
+      --purple: #8a5cff;
+      --cyan: #37d5ff;
+      --yellow: #ffd84d;
+      --green: #46ef94;
+      --danger: #ff7a90;
+      --radius: 28px;
+      --shadow: 0 24px 80px rgba(0, 0, 0, 0.38);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at 10% 10%, rgba(255,77,184,0.25), transparent 26%),
+        radial-gradient(circle at 85% 20%, rgba(55,213,255,0.18), transparent 22%),
+        radial-gradient(circle at 50% 85%, rgba(138,92,255,0.22), transparent 25%),
+        linear-gradient(180deg, var(--bg1), var(--bg2));
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    .noise, .stars, .blob, .scanline { position: fixed; inset: 0; pointer-events: none; }
+    .noise {
+      opacity: .06;
+      background-image:
+        linear-gradient(rgba(255,255,255,.5) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.45) 1px, transparent 1px);
+      background-size: 3px 3px, 3px 3px;
+      mix-blend-mode: soft-light;
+    }
+    .scanline {
+      opacity: .08;
+      background: linear-gradient(to bottom, transparent 0%, rgba(255,255,255,.25) 50%, transparent 100%);
+      background-size: 100% 6px;
+      animation: scan 9s linear infinite;
+    }
+    .stars::before,
+    .stars::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image:
+        radial-gradient(circle, rgba(255,255,255,.9) 1px, transparent 1.5px),
+        radial-gradient(circle, rgba(255,255,255,.7) 1px, transparent 1.2px);
+      background-size: 120px 120px, 180px 180px;
+      background-position: 20px 40px, 60px 90px;
+      opacity: .23;
+      animation: floatStars 22s linear infinite;
+    }
+    .stars::after { animation-duration: 30s; opacity: .12; }
+    .blob::before,
+    .blob::after {
+      content: "";
+      position: absolute;
+      width: 460px;
+      height: 460px;
+      filter: blur(60px);
+      border-radius: 50%;
+      opacity: .18;
+      animation: drift 18s ease-in-out infinite;
+    }
+    .blob::before { background: var(--pink); top: -80px; left: -120px; }
+    .blob::after { background: var(--cyan); right: -120px; bottom: -120px; animation-delay: -8s; }
+
+    @keyframes drift {
+      0%,100% { transform: translate(0,0) scale(1); }
+      50% { transform: translate(40px,-20px) scale(1.1); }
+    }
+    @keyframes floatStars {
+      from { transform: translateY(0); }
+      to { transform: translateY(120px); }
+    }
+    @keyframes wiggle {
+      0%,100% { transform: rotate(0deg); }
+      25% { transform: rotate(-1.5deg); }
+      75% { transform: rotate(1.5deg); }
+    }
+    @keyframes pulseGlow {
+      0%,100% { box-shadow: 0 0 0 rgba(255,77,184,0); }
+      50% { box-shadow: 0 0 30px rgba(255,77,184,.28); }
+    }
+    @keyframes pop {
+      from { opacity: 0; transform: translateY(12px) scale(.98); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    @keyframes scan {
+      from { transform: translateY(-100%); }
+      to { transform: translateY(100%); }
+    }
+    @keyframes glitch {
+      0%,100% { transform: translate(0); text-shadow: 0 0 0 transparent; }
+      20% { transform: translate(-1px, 1px); text-shadow: 2px 0 rgba(255,77,184,.4), -2px 0 rgba(55,213,255,.4); }
+      40% { transform: translate(1px, -1px); }
+      60% { transform: translate(-1px, 0); }
+      80% { transform: translate(1px, 1px); }
+    }
+
+    .wrap { width: min(1100px, calc(100% - 24px)); margin: 0 auto; padding: 22px 0 52px; position: relative; z-index: 1; }
+    .glass {
+      background: var(--panel);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .hero {
+      padding: 28px;
+      display: grid;
+      grid-template-columns: 1.35fr .85fr;
+      gap: 22px;
+      align-items: stretch;
+    }
+    .tagline {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.09);
+      color: #f3d4ff;
+      font-size: 13px;
+      border: 1px solid rgba(255,255,255,.08);
+    }
+    h1 {
+      margin: 16px 0 14px;
+      font-size: clamp(34px, 6vw, 68px);
+      line-height: .98;
+      letter-spacing: -0.03em;
+    }
+    .glitch-title { animation: glitch 4s infinite steps(1); }
+    .hero p {
+      color: var(--muted);
+      line-height: 1.9;
+      font-size: 16px;
+      max-width: 60ch;
+    }
+    .cta-row { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 22px; }
+    button {
+      border: 0;
+      cursor: pointer;
+      transition: transform .16s ease, opacity .16s ease, background .16s ease;
+      font: inherit;
+    }
+    button:hover { transform: translateY(-2px); }
+    .btn-main {
+      background: linear-gradient(135deg, var(--pink), var(--purple));
+      color: white;
+      padding: 14px 20px;
+      border-radius: 16px;
+      font-weight: 800;
+      animation: pulseGlow 2.2s ease-in-out infinite;
+    }
+    .btn-sub {
+      background: rgba(255,255,255,.08);
+      color: white;
+      padding: 14px 20px;
+      border-radius: 16px;
+      font-weight: 700;
+      border: 1px solid rgba(255,255,255,.08);
+    }
+
+    .sidebox {
+      padding: 22px;
+      background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.04));
+      border-radius: 24px;
+      border: 1px solid rgba(255,255,255,.12);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 16px;
+      animation: wiggle 5s ease-in-out infinite;
+    }
+    .statgrid { display: grid; grid-template-columns: repeat(2,1fr); gap: 12px; }
+    .stat {
+      padding: 16px;
+      border-radius: 18px;
+      background: rgba(255,255,255,.07);
+      border: 1px solid rgba(255,255,255,.08);
+    }
+    .stat b { display: block; font-size: 24px; margin-bottom: 6px; }
+    .stat span { color: var(--muted); font-size: 13px; }
+    .author {
+      display: flex; justify-content: space-between; align-items: center; gap: 12px;
+      padding-top: 10px; border-top: 1px dashed rgba(255,255,255,.12); color: #f1ddff; font-size: 14px;
+    }
+
+    .section { margin-top: 18px; padding: 24px; }
+    .section h2 { margin: 0 0 10px; font-size: 28px; }
+    .tip { color: var(--muted); line-height: 1.8; font-size: 14px; }
+
+    .preview-grid,
+    .result-grid,
+    .deploy-grid { display: grid; grid-template-columns: 1.05fr .95fr; gap: 18px; }
+    .box {
+      padding: 20px;
+      background: rgba(255,255,255,.06);
+      border-radius: 22px;
+      border: 1px solid rgba(255,255,255,.09);
+      min-height: 100%;
+    }
+
+    .type-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      border-radius: 18px;
+      padding: 14px 18px;
+      font-weight: 900;
+      font-size: 28px;
+      letter-spacing: .08em;
+      color: white;
+      background: linear-gradient(135deg, rgba(255,77,184,.26), rgba(55,213,255,.20));
+      border: 1px solid rgba(255,255,255,.12);
+    }
+    .mini { font-size: 13px; color: var(--muted); }
+    .pills { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+    .pill {
+      padding: 9px 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.09);
+      color: #fff3ff;
+      font-size: 13px;
+      border: 1px solid rgba(255,255,255,.08);
+    }
+
+    .hidden { display: none; }
+    .quiz, .result { animation: pop .28s ease; }
+    .progress-row { display: flex; align-items: center; gap: 14px; margin-bottom: 22px; }
+    .progress {
+      flex: 1; height: 14px; border-radius: 999px; overflow: hidden;
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.06);
+    }
+    .progress > div {
+      height: 100%; width: 0;
+      background: linear-gradient(90deg, var(--yellow), var(--pink), var(--purple), var(--cyan));
+      border-radius: inherit;
+      transition: width .25s ease;
+    }
+    .q-tag {
+      display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px;
+      border-radius: 999px; background: rgba(255,77,184,.12); color: #ffd8f1; font-size: 13px;
+      border: 1px solid rgba(255,77,184,.24);
+    }
+    .q-title {
+      margin: 16px 0 10px;
+      font-size: clamp(24px, 4vw, 40px);
+      line-height: 1.28;
+      letter-spacing: -0.02em;
+    }
+    .q-subtitle { color: #f7ddff; font-size: 13px; margin-bottom: 18px; }
+    .answers { display: grid; gap: 14px; }
+    .answer {
+      text-align: left;
+      padding: 18px 18px;
+      border-radius: 20px;
+      color: white;
+      background: linear-gradient(180deg, rgba(255,255,255,.09), rgba(255,255,255,.06));
+      border: 1px solid rgba(255,255,255,.10);
+      line-height: 1.65;
+      font-size: 15px;
+      position: relative;
+      overflow: hidden;
+    }
+    .answer::after {
+      content: "";
+      position: absolute;
+      inset: auto -20% -80% auto;
+      width: 160px; height: 160px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(255,255,255,.18), transparent 60%);
+      transition: transform .24s ease;
+      transform: scale(.8);
+    }
+    .answer:hover {
+      background: linear-gradient(180deg, rgba(255,255,255,.15), rgba(255,255,255,.10));
+      border-color: rgba(255,255,255,.18);
+    }
+    .answer:hover::after { transform: scale(1.15); }
+
+    .judge-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: rgba(8, 6, 20, 0.68);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity .18s ease, visibility .18s ease;
+    }
+    .judge-overlay.show { opacity: 1; visibility: visible; }
+    .judge-card {
+      width: min(520px, 100%);
+      padding: 24px;
+      border-radius: 24px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: linear-gradient(180deg, rgba(25,18,49,.95), rgba(19,14,38,.95));
+      box-shadow: var(--shadow);
+      text-align: center;
+    }
+    .judge-card b { display: block; font-size: 20px; margin-bottom: 10px; color: #ffe3f7; }
+    .judge-card p { margin: 0; color: var(--muted); line-height: 1.8; }
+
+    .result-title { margin: 16px 0 10px; font-size: clamp(30px, 5vw, 48px); letter-spacing: -0.03em; }
+    .result-desc { color: #f1f0ff; line-height: 1.95; font-size: 16px; }
+    .roast-box {
+      margin-top: 14px;
+      padding: 16px;
+      border-radius: 18px;
+      background: rgba(255,255,255,.07);
+      border: 1px dashed rgba(255,255,255,.14);
+      color: #fde8ff;
+      line-height: 1.8;
+    }
+    .barlist { display: grid; gap: 14px; }
+    .baritem label {
+      display: flex; justify-content: space-between; color: var(--muted); font-size: 13px; margin-bottom: 8px;
+    }
+    .bar {
+      height: 12px; border-radius: 999px; overflow: hidden; background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.06);
+    }
+    .bar > div {
+      height: 100%;
+      background: linear-gradient(90deg, var(--green), var(--cyan), var(--purple), var(--pink));
+      border-radius: inherit;
+    }
+    .share {
+      margin-top: 16px; padding: 16px; border-radius: 18px; white-space: pre-wrap; line-height: 1.8;
+      background: rgba(0,0,0,.18); border: 1px dashed rgba(255,255,255,.14); color: #f8ebff;
+    }
+    .footer-note { margin-top: 18px; color: var(--muted); font-size: 12px; line-height: 1.8; }
+    .deploy-grid { grid-template-columns: repeat(3,1fr); }
+    .deploy-grid .box h3 { margin: 0 0 10px; }
+    .deploy-grid .box p { margin: 0; color: var(--muted); line-height: 1.85; font-size: 14px; }
+    .codebox {
+      margin-top: 14px;
+      background: rgba(0,0,0,.2);
+      border: 1px solid rgba(255,255,255,.08);
+      color: #f8efff;
+      border-radius: 18px;
+      padding: 14px;
+      font-size: 13px;
+      line-height: 1.7;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    .floating-sticker {
+      position: fixed;
+      right: 16px;
+      bottom: 16px;
+      z-index: 3;
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.12);
+      border: 1px solid rgba(255,255,255,.12);
+      backdrop-filter: blur(10px);
+      color: #fff1ff;
+      font-size: 13px;
+    }
+
+    @media (max-width: 900px) {
+      .hero,
+      .preview-grid,
+      .result-grid,
+      .deploy-grid { grid-template-columns: 1fr; }
+      .wrap { width: min(100% - 16px, 1100px); }
+      .hero, .section { padding: 20px; }
+      .floating-sticker { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="noise"></div>
+  <div class="stars"></div>
+  <div class="blob"></div>
+  <div class="scanline"></div>
+
+  <div class="wrap">
+    <section class="glass hero">
+      <div>
+        <div class="tagline">🧪 SBTI 风格抽象人格检测站 · 娱乐浓度 280%</div>
+        <h1 class="glitch-title">测一测你到底是<br>哪种互联网精神状态</h1>
+        <p>
+          这不是严肃心理学，这是一个很会整活的网页。它会用一堆离谱问题，把你归类成一种同样离谱但很适合转发的四字母人格。适合深夜互测、群聊发疯、朋友圈内耗展示、前任围观和同事互相攻击。
+        </p>
+        <div class="cta-row">
+          <button class="btn-main" id="startBtn">现在开测</button>
+          <button class="btn-sub" id="scrollBtn">先看结果长啥样</button>
+        </div>
+      </div>
+      <div class="sidebox">
+        <div>
+          <div class="mini">你会获得</div>
+          <div class="statgrid">
+            <div class="stat"><b>16</b><span>种抽象人格</span></div>
+            <div class="stat"><b>12</b><span>道魔性题目</span></div>
+            <div class="stat"><b>0%</b><span>学术权威</span></div>
+            <div class="stat"><b>100%</b><span>转发欲望</span></div>
+          </div>
+        </div>
+        <div class="author">
+          <span>作者：<strong>shyvana</strong></span>
+          <span>适合发给朋友互相伤害</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="glass section" id="previewSec">
+      <h2>结果预览</h2>
+      <p class="tip">下面只是展示风格，不代表你的真实结果。你的真实结果会根据答题动态计算，而且中途系统还会假装认真分析你。</p>
+      <div class="preview-grid">
+        <div class="box">
+          <div class="type-chip">EOVA <span style="font-size:14px;font-weight:700;color:#f5d9ff;">社交打鸣机</span></div>
+          <p class="result-desc">
+            你是一种凌晨两点还能给群里发“我突然悟了”的互联网生物。擅长把小聚会升级成脱口秀专场，把随口一说讲成品牌发布会，也很容易在兴奋的时候答应一些第二天不想面对的事。
+          </p>
+          <div class="pills">
+            <span class="pill">人群开机键</span>
+            <span class="pill">脑洞自己繁殖</span>
+            <span class="pill">承诺先行选手</span>
+            <span class="pill">气氛组董事长</span>
+          </div>
+          <div class="roast-box">系统锐评：你不是社牛，你只是把沉默当成系统故障。</div>
+        </div>
+        <div class="box">
+          <div class="barlist">
+            <div class="baritem"><label><span>E 外放值</span><span>84%</span></label><div class="bar"><div style="width:84%"></div></div></div>
+            <div class="baritem"><label><span>O 抽象值</span><span>77%</span></label><div class="bar"><div style="width:77%"></div></div></div>
+            <div class="baritem"><label><span>V 情绪值</span><span>69%</span></label><div class="bar"><div style="width:69%"></div></div></div>
+            <div class="baritem"><label><span>A 冲动值</span><span>81%</span></label><div class="bar"><div style="width:81%"></div></div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="glass section quiz hidden" id="quizSec">
+      <div class="progress-row">
+        <div class="progress"><div id="prog"></div></div>
+        <div class="mini" id="progText">1 / 12</div>
+      </div>
+      <div class="q-tag" id="qTag">第 1 题 · 精神扫描中</div>
+      <div class="q-title" id="qTitle"></div>
+      <div class="q-subtitle" id="qSubtitle"></div>
+      <div class="answers" id="answerList"></div>
+      <p class="tip" style="margin-top:16px;">友情提醒：这个测试不负责拯救人生，只负责准确揭露你的抽象程度。</p>
+    </section>
+
+    <section class="glass section result hidden" id="resultSec">
+      <div class="type-chip" id="resultCode">ILMP</div>
+      <h2 class="result-title" id="resultName">低耗摸鱼体</h2>
+      <p class="result-desc" id="resultDesc"></p>
+      <div class="roast-box" id="roastBox"></div>
+
+      <div class="result-grid">
+        <div class="box">
+          <h3 style="margin-top:0;">你的互联网生存特征</h3>
+          <div class="pills" id="traits"></div>
+          <div class="share" id="shareText"></div>
+          <div class="cta-row">
+            <button class="btn-main" id="copyBtn">复制结果文案</button>
+            <button class="btn-sub" id="copyLinkBtn">复制测试链接</button>
+            <button class="btn-sub" id="restartBtn">重新发疯</button>
+          </div>
+        </div>
+        <div class="box">
+          <h3 style="margin-top:0;">维度剖面图</h3>
+          <div class="barlist" id="bars"></div>
+          <div class="footer-note">
+            作者：shyvana<br>
+            本项目为娱乐用途，不用于医学、心理诊断、招聘、择偶、升职、租房、结婚、投资、人生重大决策或和你前任复合的依据。
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="glass section">
+      <h2>怎么发链接给朋友测</h2>
+      <p class="tip">这是纯静态网页，不需要后端。把这个 HTML 文件部署到静态托管平台后，别人点链接就能直接打开测试。最省事的是 Netlify 或 Vercel。</p>
+      <div class="deploy-grid">
+        <div class="box">
+          <h3>GitHub Pages</h3>
+          <p>把文件命名为 <b>index.html</b>，放进 GitHub 仓库根目录，开启 Pages，就能得到公开链接。适合你后面继续迭代版本。</p>
+          <div class="codebox">仓库里至少保留：
+index.html
+
+GitHub -> Settings -> Pages -> Deploy from a branch -> main / root</div>
+        </div>
+        <div class="box">
+          <h3>Vercel</h3>
+          <p>最适合你这种单页网页。导入 GitHub 仓库或者直接上传目录，Vercel 会自动识别成静态站点并上线。</p>
+          <div class="codebox">本地文件夹结构：
+my-sbti-site/
+  index.html
+
+上传到 GitHub 后，Vercel 里点 New Project 导入即可。</div>
+        </div>
+        <div class="box">
+          <h3>Netlify</h3>
+          <p>最省事。你甚至可以把只有一个 <b>index.html</b> 的文件夹直接拖进 Netlify 部署页面，它会立即给你一个链接。</p>
+          <div class="codebox">部署最小结构：
+my-sbti-site/
+  index.html
+
+拖拽整个文件夹到 Netlify Drop 页面即可。</div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="floating-sticker">作者：shyvana · 抽象人格检测中</div>
+
+  <div class="judge-overlay" id="judgeOverlay">
+    <div class="judge-card">
+      <b id="judgeTitle">系统正在统计你的离谱程度…</b>
+      <p id="judgeText">请稍候，算法正在翻阅你的人类使用说明书。</p>
+    </div>
+  </div>
+
+  <script>
+    const questions = [
+      {
+        text: "朋友发来‘在吗’，你第一反应最接近哪一个？",
+        sub: "系统提示：这道题主要检测你是‘正常回复’还是‘脑内拍了 8 集连续剧’。",
+        options: [
+          { text: "我秒回：在，而且我还能顺手把群气氛拉起来", scores: { E: 2, A: 1, O: 1 } },
+          { text: "我会先盯着那两个字，怀疑自己是不是要摊上事了", scores: { I: 2, V: 1, M: 1 } },
+          { text: "我先分析语境、时间、历史聊天记录，再决定回什么", scores: { L: 2, I: 1 } },
+          { text: "先装没看见，等灵魂和网速一起上线", scores: { P: 2, M: 1 } }
+        ]
+      },
+      {
+        text: "凌晨 1:47，你突然想发朋友圈，你更可能发什么？",
+        sub: "友情提醒：深夜发圈和白天发圈，属于两种不同生物学现象。",
+        options: [
+          { text: "一段像在竞选总统又像在发疯的长文", scores: { O: 2, E: 1, V: 1 } },
+          { text: "一句‘算了’配纯黑图，让大家自己脑补", scores: { I: 2, M: 1, V: 1 } },
+          { text: "一张构图极讲究但没人懂我在表达什么的图", scores: { O: 2, V: 1 } },
+          { text: "根本不发，发之前我已经在心里删了八遍", scores: { I: 1, L: 1, P: 1 } }
+        ]
+      },
+      {
+        text: "你的人生计划更像哪一种软件更新方式？",
+        sub: "该题用于判断你是‘先跑起来’派，还是‘先写 3 页说明书’派。",
+        options: [
+          { text: "先上线再说，bug 在热爱里修", scores: { A: 2, E: 1 } },
+          { text: "更新日志写得很详细，但项目本人未必开工", scores: { L: 2, M: 1 } },
+          { text: "每次重启都像重生，但版本号并不稳定", scores: { O: 2, P: 1 } },
+          { text: "我想更新，但我先需要情绪同意书", scores: { V: 2, I: 1 } }
+        ]
+      },
+      {
+        text: "被人夸‘你好有意思’时，你内心最真实的 OS 是？",
+        sub: "请诚实作答，你的自我评价系统已经在后台开机。",
+        options: [
+          { text: "谢谢，我确实是靠人格魅力续命的", scores: { E: 2, A: 1 } },
+          { text: "你现在看到的只是我精神状态的冰山一角", scores: { O: 2, I: 1 } },
+          { text: "有意思归有意思，但请不要临时加我进局", scores: { I: 2, M: 1 } },
+          { text: "有意思只是副产品，我本质上还是有逻辑的人", scores: { L: 2, P: 1 } }
+        ]
+      },
+      {
+        text: "如果你要和人合作做事，你最怕搭到哪种人？",
+        sub: "这道题会暴露你真正不能忍的职场/友情 bug。",
+        options: [
+          { text: "一直说‘都行’，最后又什么都不行的人", scores: { A: 2, L: 1 } },
+          { text: "完全不在乎感受，把交流当成下指令的人", scores: { V: 2, I: 1 } },
+          { text: "没有创意，所有东西都想做成表格的人", scores: { O: 2, E: 1 } },
+          { text: "一天一个想法，第二天全部推翻的人", scores: { L: 2, M: 1 } }
+        ]
+      },
+      {
+        text: "下面哪种社交场景最容易让你露出本体？",
+        sub: "本题不接受‘我都不是’这种体面回答。",
+        options: [
+          { text: "人一多我就自动切到主持人模式", scores: { E: 2, A: 1 } },
+          { text: "我安静坐着，但脑内已经给每个人建模了", scores: { I: 2, O: 1 } },
+          { text: "我会优先照顾尴尬的人，不想让场子死掉", scores: { V: 2, E: 1 } },
+          { text: "我在现场，但精神已经下班回家", scores: { M: 2, P: 1 } }
+        ]
+      },
+      {
+        text: "拖延对你来说，更像下面哪种高级行为？",
+        sub: "系统知道你不是懒，只是总能把事情解释得很高级。",
+        options: [
+          { text: "不是拖延，是在等待宇宙给我最终手感", scores: { O: 2, P: 1 } },
+          { text: "我会拖，但最后会极限交卷并感动自己", scores: { A: 2, E: 1 } },
+          { text: "我不拖，我只是需要先把结构想清楚", scores: { L: 2, I: 1 } },
+          { text: "我也想开始，但我的情绪系统还在加载", scores: { V: 2, M: 1 } }
+        ]
+      },
+      {
+        text: "如果你的人格是一种办公室工位状态，它会是？",
+        sub: "工位是人格的外置硬盘，这句不是玩笑。",
+        options: [
+          { text: "桌上很乱，但我知道每一张纸的命运", scores: { O: 2, A: 1 } },
+          { text: "看着很干净，其实抽屉里有三个平行宇宙", scores: { I: 2, O: 1 } },
+          { text: "井井有条，连焦虑都分了优先级", scores: { L: 2, M: 1 } },
+          { text: "工位有人味，效率和情绪价值都得有", scores: { V: 2, P: 1 } }
+        ]
+      },
+      {
+        text: "群聊突然沉默了，你会怎么处理？",
+        sub: "本题将精确判断你是‘救场型’，还是‘旁观型高等生物’。",
+        options: [
+          { text: "发梗图、抛话题、救场，这题我会", scores: { E: 2, A: 1 } },
+          { text: "沉默挺好，我本来也只是路过看戏", scores: { I: 2, M: 1 } },
+          { text: "我要先判断有没有必要救，以及救了值不值", scores: { L: 2, P: 1 } },
+          { text: "我会想发，但怕发出来没人接更尴尬", scores: { V: 2, I: 1 } }
+        ]
+      },
+      {
+        text: "遇到非常想做的事时，你通常是？",
+        sub: "系统提醒：热爱和上头只差一层薄薄的自控力。",
+        options: [
+          { text: "先冲了，后果以后再写成复盘", scores: { A: 2, O: 1 } },
+          { text: "先设想 20 个版本的未来，再从中挑一个", scores: { L: 2, I: 1 } },
+          { text: "先想清楚自己到底是真想做还是一时上头", scores: { M: 2, L: 1 } },
+          { text: "我会被喜欢这件事本身推着往前走", scores: { V: 2, E: 1 } }
+        ]
+      },
+      {
+        text: "你更像哪种‘消息回复体质’？",
+        sub: "已开启聊天记录溯源模式，系统正在回看你未回复的那些人。",
+        options: [
+          { text: "秒回猛回，像开了自动连发", scores: { E: 2, A: 1 } },
+          { text: "心里已经回了，现实里还没发出去", scores: { I: 2, V: 1 } },
+          { text: "我要把语气、逻辑、边界感一起调对", scores: { L: 2, M: 1 } },
+          { text: "回不回取决于我当时有没有精神电量", scores: { P: 1, M: 2 } }
+        ]
+      },
+      {
+        text: "下面哪句话最像你的灵魂签名？",
+        sub: "最后一题，请用你最熟悉的方式暴露自己。",
+        options: [
+          { text: "我不是高调，我只是存在感比较有主见", scores: { E: 2, O: 1 } },
+          { text: "我不是冷，我是在后台慢慢加载", scores: { I: 2, M: 1 } },
+          { text: "我不是犹豫，我是在建立长期正确性", scores: { L: 2, P: 1 } },
+          { text: "我不是难搞，我只是想按舒服频率活着", scores: { V: 2, O: 1 } }
+        ]
+      }
+    ];
+
+    const meta = {
+      EOVA: { name: "社交打鸣机", desc: "你像一个会自己给自己打鸡血的互联网生物。擅长把普通聊天开成综艺，把聚餐搞成项目启动会，把临时起意讲成时代趋势。你最大的优点是能量足，最大的风险是答应太快，第二天灵魂维权。", traits: ["热场能力离谱", "灵感按吨产出", "承诺来得很快", "容易带飞也容易带偏"], roast: "系统锐评：你不是社牛，你只是把沉默当成系统故障。" },
+      EOVP: { name: "浪漫发疯家", desc: "你活着靠的是新鲜感、感觉和一点点不受控的想象力。你会为一句很对味的话开心三天，也会因为某个瞬间突然想换一种活法。你不是不稳定，你只是更新频率比别人高。", traits: ["体验优先", "情绪浓度高", "讨厌无聊流程", "适合制造故事"], roast: "系统锐评：你的人生不是规划表，是限时更新的艺术展。" },
+      EOMA: { name: "高压开机怪", desc: "平时你可能看着松松的，但一旦事情真到眼前，你会立刻切进战斗模式。你擅长在混乱里续航，在紧急里出活，在别人崩的时候突然显得特别靠谱。只是收工后你会像被掏空。", traits: ["关键时刻能冲", "容易透支", "现场反应快", "燃烧自己型选手"], roast: "系统锐评：你平时像在待机，真出事时像突然插上三相电。" },
+      EOMP: { name: "抽象气氛组", desc: "你是那种不靠严谨取胜、但靠灵气就能把场子救活的人。你讲话有梗，反应在线，想法会拐弯，最适合在‘本来很无聊’的场合突然放电。你的问题是，规划会被你当成参考文学。", traits: ["梗密度高", "即兴能力强", "计划执行随缘", "很会让别人笑"], roast: "系统锐评：你不是不守流程，你只是觉得流程应该配合你。" },
+      ELVA: { name: "热心推进器", desc: "你不是单纯会做事的人，你是那种一边推进进度、一边顺手把大家情绪也扶起来的人。你身上同时有责任感、执行力和一点会替别人操心的毛病。你是团队里那种离开后才会被想念的人。", traits: ["能推进", "会照顾人", "嘴上不说但会做", "责任感偏强"], roast: "系统锐评：你总说没事，其实你已经默默把三个人的事做完了。" },
+      ELVP: { name: "氛围策展人", desc: "你很懂‘感觉对了’有多重要。你看重表达、审美和人与人之间那种微妙气场。你不一定最高调，但你很会让一个场景、一句话、一次见面变得有记忆点。", traits: ["氛围感强", "表达细腻", "审美在线", "擅长制造记忆点"], roast: "系统锐评：别人活在日程里，你活在氛围里。" },
+      ELMA: { name: "靠谱救火栓", desc: "你在人群里可能不是最吵的，但一旦现场失控，你就是那个开始默默收拾残局的人。你讲逻辑、讲效率，也不喜欢把事做得太难看。你很能扛，只是别人容易默认你永远能扛。", traits: ["遇事稳住", "擅长收尾", "讲话有分寸", "经常替别人兜底"], roast: "系统锐评：你的人生像一个不断被别人插队求助的工单系统。" },
+      ELMP: { name: "温柔缓冲层", desc: "你是很多关系里的降噪装置。你不喜欢太强的压迫感，也不热衷于赢过别人，你更擅长让局面变得没那么难受。你的存在像软垫，低调但真的很有用。", traits: ["安抚能力强", "低攻击性", "不爱争抢", "柔和但不弱"], roast: "系统锐评：你不是没脾气，你只是先让世界别那么吵。" },
+      IOVA: { name: "脑内创业鬼", desc: "你看起来安静，实际上脑子里常年有十几个项目在并行。你会突然因为一个点子燃起来，然后默默研究、悄悄推进，等别人意识到时你已经在另一个宇宙了。你不吵，但你真的很忙。", traits: ["脑内项目多", "独立推进", "灵感储量大", "需要自己的空间"], roast: "系统锐评：你的肉身坐在这里，脑子已经创业三轮了。" },
+      IOVP: { name: "情绪宇航员", desc: "你更习惯在自己的轨道上感受世界。你会被某句话、某首歌、某种氛围深深击中，也会在自己的小宇宙里待很久。你不是躲人，你是在跟自己的人生片尾曲对戏。", traits: ["高感受性", "想象力旺盛", "需要独处", "沉浸感很强"], roast: "系统锐评：你不是掉线，你只是去了一个别人进不去的频道。" },
+      IOMA: { name: "沉默核反应堆", desc: "你表面很平静，实际上能量都压在内部。平时不爱高频输出，但真到关键节点，你会突然全功率运行，让人怀疑你是不是偷偷把自己升级过。你最像那种不解释、但拿结果说话的人。", traits: ["低调但能打", "关键时刻爆发", "不爱表演", "内驱力很强"], roast: "系统锐评：你不是没反应，你只是把大招都存在后台。" },
+      IOMP: { name: "隐形旁白机", desc: "你不是不参与，你只是更喜欢站在边上看清一切。你有很强的观察力，能捕捉到别人忽略的细节，也很懂什么时候该靠近、什么时候该后撤。你的社交方式像弹性材料，很有自己的边界。", traits: ["观察入微", "存在感低耗", "边界清晰", "不喜欢被硬拉入场"], roast: "系统锐评：你是现场最安静的人，也是知道最多的人。" },
+      ILVA: { name: "温柔总控台", desc: "你是少见的‘讲逻辑但不冷’的人。做事时你有结构，讲话时你有温度，关系里你既知道边界，也知道分寸。你像一台安静运行的中控系统，看着不炸裂，但非常耐用。", traits: ["稳定可靠", "有逻辑也有温度", "善于统筹", "不轻易失控"], roast: "系统锐评：你像一个会安抚人的操作系统。" },
+      ILVP: { name: "清醒浪漫鬼", desc: "你既保留了感性和想象力，又不会完全把方向盘交给情绪。你会浪漫，但你心里也知道哪里该踩刹车。你是那种看似柔软、其实非常有自我系统的人。", traits: ["浪漫但清醒", "表达有层次", "边界感强", "不容易被带跑"], roast: "系统锐评：你不是恋爱脑，你只是对美感有纪律。" },
+      ILMA: { name: "冷静主心骨", desc: "你最擅长的，不是热闹，而是稳。别人慌的时候你会更清醒，别人乱的时候你会更想把事情摆回原位。你很适合当‘那个最后还能讲话有条理的人’，只是你偶尔也会被误以为太无情。", traits: ["很稳", "逻辑优先", "抗压强", "像人形定海神针"], roast: "系统锐评：别人情绪起飞时，你还在给现实系安全带。" },
+      ILMP: { name: "低耗摸鱼体", desc: "你不喜欢大开大合，也不爱把生活过成持续高强度直播。你更适合有自己的节奏、自己的小空间和自己能掌控的舒服感。你不是不上进，你只是觉得人生没必要每天都像在赶版本。", traits: ["低耗社交", "舒服优先", "节奏自定义", "很会保护能量"], roast: "系统锐评：你不是摆烂，你是在反抗没必要的系统更新。" }
+    };
+
+    const axisMeta = [
+      { left: 'E', right: 'I', leftLabel: '外放值', rightLabel: '内收值' },
+      { left: 'O', right: 'L', leftLabel: '抽象值', rightLabel: '逻辑值' },
+      { left: 'V', right: 'M', leftLabel: '情绪值', rightLabel: '克制值' },
+      { left: 'A', right: 'P', leftLabel: '冲动值', rightLabel: '节奏值' }
+    ];
+
+    const judgeLines = [
+      { title: '系统正在统计你的离谱程度…', text: '请稍候，算法正在翻阅你的人类使用说明书。' },
+      { title: '正在核对你的抽象波动…', text: '检测到你同时具备正常与不太正常的行为特征。' },
+      { title: '正在压缩你的精神状态…', text: '系统试图把你的复杂程度塞进 4 个字母里。' },
+      { title: '正在计算你在群聊中的危险等级…', text: '你的发言风格可能会影响至少 3 个群的走向。' }
+    ];
+
+    let index = 0;
+    let scores = {};
+
+    const startBtn = document.getElementById('startBtn');
+    const scrollBtn = document.getElementById('scrollBtn');
+    const previewSec = document.getElementById('previewSec');
+    const quizSec = document.getElementById('quizSec');
+    const resultSec = document.getElementById('resultSec');
+    const prog = document.getElementById('prog');
+    const progText = document.getElementById('progText');
+    const qTag = document.getElementById('qTag');
+    const qTitle = document.getElementById('qTitle');
+    const qSubtitle = document.getElementById('qSubtitle');
+    const answerList = document.getElementById('answerList');
+    const resultCode = document.getElementById('resultCode');
+    const resultName = document.getElementById('resultName');
+    const resultDesc = document.getElementById('resultDesc');
+    const roastBox = document.getElementById('roastBox');
+    const traits = document.getElementById('traits');
+    const bars = document.getElementById('bars');
+    const shareText = document.getElementById('shareText');
+    const copyBtn = document.getElementById('copyBtn');
+    const copyLinkBtn = document.getElementById('copyLinkBtn');
+    const restartBtn = document.getElementById('restartBtn');
+    const judgeOverlay = document.getElementById('judgeOverlay');
+    const judgeTitle = document.getElementById('judgeTitle');
+    const judgeText = document.getElementById('judgeText');
+
+    function resetScores() {
+      scores = { E: 0, I: 0, O: 0, L: 0, V: 0, M: 0, A: 0, P: 0 };
+    }
+
+    function startQuiz() {
+      resetScores();
+      index = 0;
+      resultSec.classList.add('hidden');
+      quizSec.classList.remove('hidden');
+      quizSec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      renderQuestion();
+    }
+
+    function renderQuestion() {
+      const q = questions[index];
+      prog.style.width = `${(index / questions.length) * 100}%`;
+      progText.textContent = `${index + 1} / ${questions.length}`;
+      qTag.textContent = `第 ${index + 1} 题 · 正在解析你的互联网本体`;
+      qTitle.textContent = q.text;
+      qSubtitle.textContent = q.sub;
+      answerList.innerHTML = '';
+      q.options.forEach(opt => {
+        const btn = document.createElement('button');
+        btn.className = 'answer';
+        btn.textContent = opt.text;
+        btn.addEventListener('click', async () => {
+          Object.entries(opt.scores).forEach(([key, value]) => { scores[key] += value; });
+          await flashJudge();
+          index++;
+          if (index < questions.length) {
+            renderQuestion();
+          } else {
+            prog.style.width = '100%';
+            renderResult();
+          }
+        });
+        answerList.appendChild(btn);
+      });
+    }
+
+    function choose(a, b) {
+      return scores[a] >= scores[b] ? a : b;
+    }
+
+    function percentage(a, b) {
+      const total = scores[a] + scores[b] || 1;
+      return Math.round((scores[a] / total) * 100);
+    }
+
+    function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    async function flashJudge() {
+      const item = judgeLines[Math.floor(Math.random() * judgeLines.length)];
+      judgeTitle.textContent = item.title;
+      judgeText.textContent = item.text;
+      judgeOverlay.classList.add('show');
+      await sleep(420);
+      judgeOverlay.classList.remove('show');
+      await sleep(80);
+    }
+
+    function renderResult() {
+      quizSec.classList.add('hidden');
+      resultSec.classList.remove('hidden');
+      const code = [choose('E','I'), choose('O','L'), choose('V','M'), choose('A','P')].join('');
+      const data = meta[code] || meta.ILMP;
+
+      resultCode.textContent = code;
+      resultName.textContent = data.name;
+      resultDesc.textContent = data.desc;
+      roastBox.textContent = data.roast;
+
+      traits.innerHTML = '';
+      data.traits.forEach(t => {
+        const span = document.createElement('span');
+        span.className = 'pill';
+        span.textContent = t;
+        traits.appendChild(span);
+      });
+
+      bars.innerHTML = '';
+      const shareAxis = [];
+      axisMeta.forEach(axis => {
+        const p = percentage(axis.left, axis.right);
+        const item = document.createElement('div');
+        item.className = 'baritem';
+        item.innerHTML = `<label><span>${axis.left} ${axis.leftLabel}</span><span>${p}%</span></label><div class="bar"><div style="width:${p}%"></div></div>`;
+        bars.appendChild(item);
+        shareAxis.push(`${axis.left}/${axis.right}：${p}% 偏向 ${axis.left}`);
+      });
+
+      const testUrl = window.location.href;
+      shareText.textContent = `我测出来的抽象人格是：${code} · ${data.name}\n\n${data.desc}\n\n系统锐评：${data.roast}\n\n我的互联网特征：${data.traits.join(' / ')}\n${shareAxis.join('\n')}\n\n作者：shyvana\n来测：${testUrl}`;
+      resultSec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    copyBtn.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(shareText.textContent);
+        copyBtn.textContent = '已复制，快去群里发';
+        setTimeout(() => copyBtn.textContent = '复制结果文案', 1600);
+      } catch (e) {
+        copyBtn.textContent = '复制失败，再按一次';
+        setTimeout(() => copyBtn.textContent = '复制结果文案', 1600);
+      }
+    });
+
+    copyLinkBtn.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(window.location.href);
+        copyLinkBtn.textContent = '链接已复制';
+        setTimeout(() => copyLinkBtn.textContent = '复制测试链接', 1600);
+      } catch (e) {
+        copyLinkBtn.textContent = '复制失败';
+        setTimeout(() => copyLinkBtn.textContent = '复制测试链接', 1600);
+      }
+    });
+
+    restartBtn.addEventListener('click', startQuiz);
+    startBtn.addEventListener('click', startQuiz);
+    scrollBtn.addEventListener('click', () => previewSec.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+
+    resetScores();
+  </script>
+</body>
+</html>
